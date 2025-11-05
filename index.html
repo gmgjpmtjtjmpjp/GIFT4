@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Coin Center — オフラインデモ（黒×赤）</title>
+<style>
+:root{
+  --bg:#07060a; --panel:#0d0c10; --muted:#9aa0a6;
+  --accent:#ff2d6d; --accent-dark:#c21f54;
+  --glass: rgba(255,255,255,0.03);
+  --radius:14px;
+  --mono: 'Segoe UI', Roboto, "Hiragino Kaku Gothic ProN", Meiryo, Arial, sans-serif;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+html,body{height:100%;margin:0;font-family:var(--mono);background:linear-gradient(180deg,var(--bg),#050408);color:#eee}
+.container{max-width:1100px;margin:18px auto;padding:18px;display:grid;grid-template-columns:1fr 360px;gap:18px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:46px;height:46px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#ff6e9e);display:grid;place-items:center;font-weight:900;color:#111;font-size:20px}
+.title{font-weight:800;font-size:20px}
+.controls{display:flex;gap:8px;align-items:center}
+.btn{padding:10px 14px;border-radius:12px;border:none;cursor:pointer;font-weight:800;color:#fff;background:linear-gradient(90deg,var(--accent),#ff6e8e);box-shadow:0 8px 26px rgba(255,45,109,0.12)}
+.btn.alt{background:linear-gradient(90deg,#2fb6ff,#66d8ff);color:#062133}
+.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+.card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:14px;border-radius:var(--radius);border:1px solid rgba(255,255,255,0.03);box-shadow:0 12px 36px rgba(0,0,0,0.6)}
+.mainTop{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.balanceBox{display:flex;flex-direction:column}
+.balanceLabel{color:var(--muted);font-size:13px}
+.balanceVal{font-size:34px;font-weight:900;color:#fff}
+.accountBox{text-align:right}
+.small{font-size:13px;color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center}
+.section{margin-top:14px}
+.packGrid{display:flex;gap:10px;flex-wrap:wrap}
+.pack{flex:1;min-width:110px;padding:12px;border-radius:10px;background:var(--glass);text-align:center;border:1px solid rgba(255,255,255,0.02)}
+.pack strong{font-size:18px;display:block;margin-bottom:6px}
+.inputs input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#fff}
+.side{display:flex;flex-direction:column;gap:12px}
+.history{max-height:420px;overflow:auto;padding-right:6px}
+.item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);border:1px solid rgba(255,255,255,0.02);margin-bottom:8px}
+.tiny{font-size:12px;color:var(--muted)}
+.footer{grid-column:1/-1;text-align:center;color:var(--muted);margin-top:12px}
+
+/* keypad */
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.key{padding:14px;border-radius:10px;background:linear-gradient(180deg,#0f0e12,#141217);border:1px solid rgba(255,255,255,0.04);font-weight:800;font-size:18px;text-align:center;cursor:pointer;color:#fff}
+.key:active{transform:scale(0.97);filter:brightness(0.9)}
+.controlsRow{display:flex;gap:8px;margin-top:10px}
+
+/* modal / timer */
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:90}
+.modal.open{display:flex}
+.dialog{width:92%;max-width:420px;background:linear-gradient(180deg,#0b0b0d,#0f0f12);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04)}
+.timerBig{font-size:42px;font-weight:900;color:var(--accent);text-align:center}
+.timerSmall{color:var(--muted);text-align:center;margin-top:6px}
+
+/* gift box */
+.boxArea{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.boxIcon{width:64px;height:64px;border-radius:12px;background:linear-gradient(180deg,#1a0b12,#2a0f1a);display:grid;place-items:center;font-weight:900;color:var(--accent)}
+.badge{background:var(--accent);color:#111;padding:4px 8px;border-radius:999px;font-weight:800}
+
+/* responsive */
+@media(max-width:980px){
+  .container{grid-template-columns:1fr;padding:12px;gap:12px}
+  .side{order:2}
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div>
+    <div class="header">
+      <div class="brand">
+        <div class="logo">C</div>
+        <div>
+          <div class="title">Coin Center</div>
+          <div class="small">オフラインデモ — 黒×赤テーマ</div>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="tiny">ログイン: <strong id="currentName">demo_user</strong></div>
+        <button class="btn ghost" id="changeNameBtn">名前変更</button>
+        <button class="btn ghost" id="receiveBoxBtn">🎁 プレゼント</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="mainTop">
+        <div class="balanceBox">
+          <div class="balanceLabel">保有コイン</div>
+          <div class="balanceVal" id="balanceMain">0</div>
+          <div class="tiny">デモ残高</div>
+        </div>
+        <div class="accountBox">
+          <div class="small">アカウント</div>
+          <div style="font-weight:800" id="accountDisplay">demo_user</div>
+          <div style="height:6px"></div>
+          <button class="btn ghost" id="toPurchaseBtn">課金する</button>
+          <button class="btn ghost" id="toGiftBtn">ギフトを送る</button>
+        </div>
+      </div>
+
+      <!-- purchase panel -->
+      <div id="purchasePanel" class="section">
+        <div class="small">購入 — 数字ボタンで枚数を組み立てて「購入」</div>
+        <div style="margin-top:8px" class="inputs">
+          <input id="purchaseDisplay" type="text" value="0" readonly>
+        </div>
+        <div class="keypad" id="purchaseKeypad"></div>
+        <div class="controlsRow">
+          <button class="btn" id="buyBtn">購入（デモ）</button>
+          <button class="btn ghost" id="buyClear">クリア</button>
+          <button class="btn ghost" id="buyBack">←</button>
+          <input id="customBuyName" placeholder="購入時メモ（任意）" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#fff">
+        </div>
+        <div class="tiny" style="margin-top:8px;color:var(--muted)">※ 実際の決済は行われません。デモ表示のみ。</div>
+      </div>
+
+      <!-- gift panel -->
+      <div id="giftPanel" class="section" style="display:none">
+        <div class="small">ギフトを送る（相手の名前を入力してから金額を決める）</div>
+        <div style="margin-top:8px">
+          <input id="giftTo" placeholder="受取ユーザー名（例: Riko）" style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#fff;width:100%">
+        </div>
+        <div style="margin-top:10px">
+          <input id="giftDisplay" type="text" value="0" readonly style="font-weight:800;text-align:right">
+          <div class="keypad" id="giftKeypad"></div>
+        </div>
+        <div class="controlsRow" style="margin-top:8px">
+          <button class="btn" id="startSendBtn">送信（確認）</button>
+          <button class="btn ghost" id="giftClear">クリア</button>
+          <button class="btn ghost" id="giftBack">←</button>
+        </div>
+        <div class="tiny" style="margin-top:8px;color:var(--muted)">送信はローカル保存の「保留箱（プレゼント）」に入ります。受取側がプレゼントを受け取ると残高に反映されます。</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="side card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div class="small">現在の残高</div>
+        <div class="balanceVal" id="balanceSide">0</div>
+        <div class="tiny">アカウント: <span id="sideAccount">demo_user</span></div>
+      </div>
+      <div style="text-align:right">
+        <button class="btn ghost" id="exportCsvBtn">CSV出力</button>
+        <button class="btn ghost" id="clearHistoryBtn">履歴クリア</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="small">受取箱</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn" id="openInboxBtn">受け取る</button>
+        <div style="margin-left:auto" class="badge" id="inboxCount">0</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="small">送信 / 購入履歴</div>
+      <div class="history" id="historyArea"></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">このサイトはデモです — 実際の課金や送金は行われません</div>
+
+<!-- Timer modal -->
+<div class="modal" id="timerModal" aria-hidden="true">
+  <div class="dialog">
+    <div style="text-align:center">
+      <div class="tiny">送信準備中（視覚表示：05:00）</div>
+      <div id="visualTimer" class="tiny" style="font-size:14px;margin-top:6px;color:var(--muted)">05:00</div>
+      <div id="countdown" class="timerBig">3.0s</div>
+      <div style="margin-top:12px"><button class="btn ghost" id="cancelSendBtn">キャンセル</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Receive modal -->
+<div class="modal" id="inboxModal" aria-hidden="true">
+  <div class="dialog">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="boxArea">
+        <div class="boxIcon">🎁</div>
+        <div>
+          <div style="font-weight:800" id="inboxUserLabel">受取: —</div>
+          <div class="tiny" id="inboxCountSmall">保留中の贈り物</div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div class="tiny">合計</div>
+        <div class="balanceVal" id="inboxTotal">0</div>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <div id="inboxList" style="max-height:300px;overflow:auto"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn" id="acceptAllBtn">受け取る（すべて）</button>
+      <button class="btn ghost" id="closeInboxBtn">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // --- storage keys ---
+  const KEY_BAL = 'coin_demo_balance_v2';
+  const KEY_HIS = 'coin_demo_history_v2';
+  const KEY_INBOX = 'coin_demo_inbox_v2';
+  const KEY_NAME = 'coin_demo_name_v2';
+
+  // --- helpers ---
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  function fmt(n){ return Number(n||0).toLocaleString(); }
+
+  // --- state load ---
+  let balance = Number(localStorage.getItem(KEY_BAL) || 2500);
+  let history = JSON.parse(localStorage.getItem(KEY_HIS) || '[]');
+  let inbox = JSON.parse(localStorage.getItem(KEY_INBOX) || '[]');
+  let uname = localStorage.getItem(KEY_NAME) || 'demo_user';
+
+  // --- elements ---
+  const balanceMain = $('#balanceMain');
+  const balanceSide = $('#balanceSide');
+  const balanceSideSmall = $('#balanceSide');
+  const balanceMainAll = () => { balanceMain.textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); };
+  const balanceEls = () => { $('#balanceMain').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); $('#balanceSide').textContent = fmt(balance); };
+
+  function renderAll(){
+    $('#balanceMain').textContent = fmt(balance);
+    $('#balanceSide').textContent = fmt(balance);
+    $('#balanceSide').textContent = fmt(balance);
+    $('#balanceSide').textContent = fmt(balance);
+    $('#accountDisplay').textContent = uname;
+    $('#currentName').textContent = uname;
+    $('#sideAccount').textContent = uname;
+    renderHistory();
+    renderInboxBadge();
+    renderInboxCount();
+  }
+
+  function saveAll(){
+    localStorage.setItem(KEY_BAL, String(balance));
+    localStorage.setItem(KEY_HIS, JSON.stringify(history));
+    localStorage.setItem(KEY_INBOX, JSON.stringify(inbox));
+    localStorage.setItem(KEY_NAME, uname);
+  }
+
+  // history render
+  function renderHistory(){
+    const el = $('#historyArea');
+    el.innerHTML = history.length ? history.map(h => `
+      <div class="item">
+        <div>
+          <div style="font-weight:700">${h.type==='purchase' ? '購入' : (h.type==='gift' ? '送信' : '受取')}</div>
+          <div class="tiny">${new Date(h.time).toLocaleString()}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:900">${fmt(h.amount)}</div>
+          <div class="tiny">${h.msg||''}</div>
+        </div>
+      </div>
+    `).join('') : '<div class="tiny" style="padding:8px;color:var(--muted)">履歴はありません</div>';
+  }
+
+  // inbox badge and count
+  function renderInboxBadge(){
+    const c = inbox.length;
+    $('#inboxCount').textContent = c;
+  }
+  function renderInboxCount(){
+    $('#inboxCountSmall').textContent = `${inbox.length} 件`;
+  }
+
+  // --- initial render ---
+  renderAll();
+
+  // --- navigation ---
+  $('#toPurchaseBtn').addEventListener('click', ()=> {
+    $('#purchasePanel').style.display='block'; $('#giftPanel').style.display='none';
+  });
+  $('#toGiftBtn').addEventListener('click', ()=> {
+    $('#purchasePanel').style.display='none'; $('#giftPanel').style.display='block';
+  });
+  $('#toPurchaseBtn').addEventListener('touchstart', ()=> { $('#purchasePanel').style.display='block'; $('#giftPanel').style.display='none'; });
+  $('#toGiftBtn').addEventListener('touchstart', ()=> { $('#purchasePanel').style.display='none'; $('#giftPanel').style.display='block'; });
+
+  // --- name change ---
+  $('#changeNameBtn').addEventListener('click', ()=>{
+    const v = prompt('表示名を入力してください（例: Riko）', uname);
+    if(v && v.trim()){
+      uname = v.trim();
+      saveAll();
+      renderAll();
+      pulse('名前を更新しました：' + uname);
+    }
+  });
+  $('#changeNameBtn').addEventListener('touchstart', ()=> $('#changeNameBtn').click());
+
+  // --- keypad building for purchase & gift ---
+  const keys = ['1','2','3','4','5','6','7','8','9','0','00','000'];
+  function buildKeypad(containerId){
+    const cont = $(containerId);
+    cont.innerHTML = '';
+    keys.forEach(k=>{
+      const d = document.createElement('div');
+      d.className='key'; d.textContent = k;
+      const handler = e => {
+        e.preventDefault();
+        const disp = document.getElementById(containerId=== '#purchaseKeypad' ? 'purchaseDisplay' : 'giftDisplay');
+        appendAmount(disp, k);
+      };
+      d.addEventListener('click', handler);
+      d.addEventListener('touchstart', handler, {passive:false});
+      cont.appendChild(d);
+    });
+  }
+  buildKeypad('#purchaseKeypad');
+  buildKeypad('#giftKeypad');
+
+  function appendAmount(displayEl, token){
+    let cur = Number(displayEl.value.replace(/,/g,'') || 0);
+    if(token === '00') cur = Number(String(cur) + '00');
+    else if(token === '000') cur = Number(String(cur) + '000');
+    else cur = Number(String(cur) + token);
+    if(cur > 100000000) cur = 100000000;
+    displayEl.value = cur.toLocaleString();
+  }
+
+  // clear/back functionality
+  $('#buyClear').addEventListener('click', ()=>{ $('#purchaseDisplay').value='0'; });
+  $('#buyClear').addEventListener('touchstart', ()=> $('#buyClear').click());
+  $('#buyBack').addEventListener('click', ()=> {
+    let s = $('#purchaseDisplay').value.replace(/,/g,'');
+    s = s.length<=1 ? '0' : s.slice(0,-1);
+    $('#purchaseDisplay').value = Number(s).toLocaleString();
+  });
+  $('#buyBack').addEventListener('touchstart', ()=> $('#buyBack').click());
+
+  $('#giftClear').addEventListener('click', ()=>{ $('#giftDisplay').value='0'; });
+  $('#giftClear').addEventListener('touchstart', ()=> $('#giftClear').click());
+  $('#giftBack').addEventListener('click', ()=> {
+    let s = $('#giftDisplay').value.replace(/,/g,'');
+    s = s.length<=1 ? '0' : s.slice(0,-1);
+    $('#giftDisplay').value = Number(s).toLocaleString();
+  });
+  $('#giftBack').addEventListener('touchstart', ()=> $('#giftBack').click());
+
+  // --- purchase action ---
+  $('#buyBtn').addEventListener('click', ()=> doPurchase());
+  $('#buyBtn').addEventListener('touchstart', ()=> { $('#buyBtn').click(); });
+
+  function doPurchase(){
+    const n = Number($('#purchaseDisplay').value.replace(/,/g,'')||0);
+    const note = $('#customBuyName').value || '購入';
+    if(!n || n<=0){ alert('追加する枚数を入力してください'); return; }
+    balance += n;
+    history.unshift({ type:'purchase', amount:n, msg:note, time: new Date().toISOString() });
+    saveAll(); renderAll();
+    $('#purchaseDisplay').value = '0'; $('#customBuyName').value = '';
+    pulse(fmt(n) + ' コインを追加しました（デモ）');
+  }
+
+  // --- quick pack buttons (some may exist in previous UI) ---
+  $$('.addPack').forEach(b=>{
+    const add = () => {
+      const n = Number(b.dataset.add || 0);
+      balance += n;
+      history.unshift({ type:'purchase', amount:n, msg:'パック購入', time: new Date().toISOString() });
+      saveAll(); renderAll();
+      pulse(fmt(n) + ' コインを追加しました（パック）');
+    };
+    b.addEventListener('click', add);
+    b.addEventListener('touchstart', add);
+  });
+
+  // --- send flow: visual 05:00 and actual 3s countdown ---
+  let sendInterval = null;
+  $('#startSendBtn').addEventListener('click', ()=> startSendFlow());
+  $('#startSendBtn').addEventListener('touchstart', ()=> $('#startSendBtn').click());
+
+  function startSendFlow(){
+    const to = $('#giftTo').value.trim();
+    const n = Number($('#giftDisplay').value.replace(/,/g,'')||0);
+    if(!to){ alert('受取ユーザー名を入力してください'); return; }
+    if(!n || n<=0){ alert('送るコイン数を入力してください'); return; }
+    if(n > balance){ alert('残高が不足しています'); return; }
+
+    // show modal
+    $('#timerModal').classList.add('open');
+    $('#timerModal').setAttribute('aria-hidden','false');
+    $('#visualTimer').textContent = '05:00';
+    let t = 3.0;
+    $('#countdown').textContent = t.toFixed(1) + 's';
+    if(sendInterval) clearInterval(sendInterval);
+    sendInterval = setInterval(()=>{
+      t -= 0.1;
+      if(t <= 0){
+        clearInterval(sendInterval); sendInterval = null;
+        performSend(to, n);
+        $('#timerModal').classList.remove('open');
+        $('#timerModal').setAttribute('aria-hidden','true');
+      } else {
+        $('#countdown').textContent = t.toFixed(1) + 's';
+      }
+    }, 100);
+  }
+
+  $('#cancelSendBtn').addEventListener('click', ()=>{
+    if(sendInterval) clearInterval(sendInterval);
+    sendInterval = null;
+    $('#timerModal').classList.remove('open');
+    $('#timerModal').setAttribute('aria-hidden','true');
+    pulse('送信をキャンセルしました');
+  });
+  $('#cancelSendBtn').addEventListener('touchstart', ()=> $('#cancelSendBtn').click());
+
+  function performSend(to, amt){
+    // deduct balance locally
+    balance -= amt;
+    // save history (as sent)
+    history.unshift({ type:'gift', amount:amt, msg:`送信->${to}`, time:new Date().toISOString(), user: to });
+    // add to INBOX (pending) - push an entry actually addressed to recipient
+    inbox.unshift({ to, amount: amt, from: uname, time: new Date().toISOString() });
+    saveAll(); renderAll();
+    $('#giftDisplay').value = '0'; $('#giftTo').value = '';
+    pulse('🎉 送信しました（保留箱へ）');
+  }
+
+  // --- inbox / receive flow ---
+  $('#receiveBoxBtn').addEventListener('click', ()=> $('#openInboxBtn').click());
+  $('#receiveBoxBtn').addEventListener('touchstart', ()=> $('#receiveBoxBtn').click());
+
+  $('#openInboxBtn').addEventListener('click', ()=> openInbox());
+  $('#openInboxBtn').addEventListener('touchstart', ()=> $('#openInboxBtn').click());
+
+  function openInbox(){
+    // list items addressed to current uname
+    const myItems = inbox.filter(it => it.to === uname);
+    $('#inboxUserLabel').textContent = `受取: ${uname}`;
+    const listEl = $('#inboxList');
+    if(myItems.length===0){
+      listEl.innerHTML = '<div class="tiny" style="padding:8px;color:var(--muted)">受け取り可能なアイテムはありません</div>';
+      $('#inboxTotal').textContent =
